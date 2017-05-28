@@ -16,7 +16,7 @@ You can also pass in observables as properties in which case they are synced bet
 
 ```julia
 ob = Observable("hello")
-vue(template, [:message=ob, :visible=true])
+vue(template, [:message=>ob, :visible=>true])
 ```
 
 Now if at any time you run `ob[] = "hey there!"` on Julia, you should see the contents of the message update in the UI.
@@ -25,8 +25,8 @@ Now if at any time you run `ob[] = "hey there!"` on Julia, you should see the co
 incoming = Observable("")
 on(println, incoming) # print to console on every update
 
-template = dom"input[type=text,v-model=message]"(message=incoming)
-vue(template, [:message=ob, :visible=true])
+template = dom"input[type=text,v-model=message]"()
+vue(template, [:message=>incoming])
 ```
 
 This will cause the value of the textbox to flow back to Julia, and should get printed to STDOUT since we have a listener to print it.
