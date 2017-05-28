@@ -1,18 +1,20 @@
-module VueJS
+module Vue
 
 using WebIO
 
-function vue(template; kwargs...)
+export vue
+
+function vue(template, data=[]; kwargs...)
     id = WebIO.newid("vue-instance")
 
     wrapper = Widget(id,
         dependencies=[Dict("url"=>"https://unpkg.com/vue", "type"=>"js")]
     )
 
-    data = Dict()
+    init = Dict()
     watches = Dict()
 
-    for (k, v) in kwargs
+    for (k, v) in data
         skey = string(k)
         if isa(v, Observable)
             setobservable!(wrapper, skey, v)
@@ -21,25 +23,25 @@ function vue(template; kwargs...)
             onjs(v, @js (ctx, val) -> ctx.vue[$skey] = val)
 
             # forward vue updates back to WebIO observable
+            # which might send it to Julia
             watches[skey] = @js ctx.vue["\$watch"]($skey, function (newval, oldval)
-                                        $ob[] = newval
+                                           WebIO.setval($ob, newval, true)
                                        end)
-            data[skey] = v[]
+            init[skey] = v[]
         else
-            data[skey] = v
+            init[skey] = v
         end
     end
 
+    options = merge(Dict("el"=>"#$id", "data"=>init), Dict(kwargs))
+
     after(wrapper, "dependenciesLoaded", @js function (deps, ctx)
             @var Vue = deps[0];
-            ctx.vue = @new Vue(d(el=$("#$id"),
-                  data=$data
-                 )
-               )
+            ctx.vue = @new Vue($options)
             $(values(watches)...)
           end)
 
-    wrapper(dom"div"(template, id=id))
+    wrapper(dom"div"(template, id=id)) # FIXME why can't I set the ID on the class?
 end
 
 end # module

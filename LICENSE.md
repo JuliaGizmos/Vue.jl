@@ -1,4 +1,4 @@
-The VueJS.jl package is licensed under the MIT "Expat" License:
+The Vue.jl package is licensed under the MIT "Expat" License:
 
 > Copyright (c) 2017: Shashi Gowda.
 > 

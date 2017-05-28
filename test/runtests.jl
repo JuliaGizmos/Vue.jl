@@ -1,4 +1,4 @@
-using VueJS
+using Vue
 using Base.Test
 
 # write your own tests here

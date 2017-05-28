@@ -28,7 +28,7 @@ build_script:
 # Need to convert from shallow to complete for Pkg.clone to work
   - IF EXIST .git\shallow (git fetch --unshallow)
   - C:\projects\julia\bin\julia -e "versioninfo();
-      Pkg.clone(pwd(), \"VueJS\"); Pkg.build(\"VueJS\")"
+      Pkg.clone(pwd(), \"Vue\"); Pkg.build(\"Vue\")"
 
 test_script:
-  - C:\projects\julia\bin\julia -e "Pkg.test(\"VueJS\")"
+  - C:\projects\julia\bin\julia -e "Pkg.test(\"Vue\")"
