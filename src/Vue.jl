@@ -25,7 +25,7 @@ function vue(template, data=[]; kwargs...)
             # forward vue updates back to WebIO observable
             # which might send it to Julia
             watches[skey] = @js ctx.vue["\$watch"]($skey, function (newval, oldval)
-                                           WebIO.setval($ob, newval, true)
+                                           $v[] = newval
                                        end)
             init[skey] = v[]
         else
