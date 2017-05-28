@@ -2,7 +2,7 @@ module Vue
 
 using WebIO
 
-export vue
+export vue, Observable, on, @js, @js_str, @dom_str
 
 function vue(template, data=[]; kwargs...)
     id = WebIO.newid("vue-instance")
