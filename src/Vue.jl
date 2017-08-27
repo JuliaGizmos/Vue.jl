@@ -114,14 +114,14 @@ function vue(template, data=Dict(); dependencies=vue_deps,
 
     # the below `display_new_instance` will be run when the widget is to be
     # displayed
-    WebIO.showcbs[n] = function display_new_instance(io, node_id)
-        vueid = id*"-$node_id"
+    WebIO.showcbs[n] = function display_new_instance(parent_id=WebIO.newid("node"))
+        vueid = id*"-$parent_id"
         nnew = append(n, [dom"div#$vueid"(template)])
         options["el"] = "#$vueid"
 
         ondeps_fn = @js function (Vue)
-            # `this` is set to the JS Widget instance here
-            # `arguments` is an array of the module objects, loaded from `dependencies`
+            # `this` is set to the JS Widget instance here. `arguments` is an
+            # array of the module objects, loaded from `dependencies`
             ($run_ondeps).apply(this, arguments)
             console.log("initialising "+$vueid)
             this.vue = @new Vue($options)
@@ -134,11 +134,11 @@ function vue(template, data=Dict(); dependencies=vue_deps,
         end
 
         # n.b. a new deps promise is created for each displayed instance,
-        # `after` only adds the `ondeps_fn` to the latest instance. In contrast,
-        # the `onjs` function stores the handlers in julia and thus when a new
-        # js instance is displayed, all handlers will be run when the
-        # dependenciesLoaded promise resolves, thus we use `after` here to just
-        # run the ondeps_fn for the instance we're about to display.
+        # `ondependencies` only adds the `ondeps_fn` to the latest instance. In
+        # contrast, the `onjs` function stores the handlers in julia and thus
+        # when a new js instance is displayed, all handlers will be run when the
+        # dependenciesLoaded promise resolves, thus we use `ondependencies` here
+        # to just run the ondeps_fn for the instance we're about to display.
         ondependencies(wrapper, ondeps_fn)
         nnew
     end
