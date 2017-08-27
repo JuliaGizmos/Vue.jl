@@ -139,7 +139,7 @@ function vue(template, data=Dict(); dependencies=vue_deps,
         # js instance is displayed, all handlers will be run when the
         # dependenciesLoaded promise resolves, thus we use `after` here to just
         # run the ondeps_fn for the instance we're about to display.
-        after(wrapper, "dependenciesLoaded", ondeps_fn)
+        ondependencies(wrapper, ondeps_fn)
         nnew
     end
     n
