@@ -43,80 +43,50 @@ function vue(template, data=Dict(); dependencies=vue_deps,
     # runs per component, so if the component is displayed twice it won't be run
     # again.
 
-    id = WebIO.newid("vue-component")
-
-    wrapper = Widget(id,
-        dependencies=dependencies
-    )
-
-    init = Dict()
-    watches = Dict()
-
+    vuedata = Dict()
     for (k, v) in data
         skey = string(k)
-        if isa(v, Observable)
-            # associate the observable with the widget wrapper
-            setobservable!(wrapper, skey, v)
-
-            # forward updates from Julia to the Vue property, Vue watches the
-            # window.vueinfo[$id].data object, and updates view accordingly
-            onjs(v, @js (val) -> (window.vueinfo[$id].data[$skey] = val))
-
-            # forward vue updates back to WebIO observable, which might send it
-            # to Julia. Note, if the component is rendered multiple times,
-            # window.vueinfo[$id].vm will refer to only the first instance. However, all
-            # instances will update the shared data object for this component:
-            # window.vueinfo[$id].data, and thus the Observable (on the js and Julia
-            # sides) and all instances will stay in sync.
-            # TODO if the first instance is removed, then no one will be watching,
-            # so updates won't come to julia. To fix, store all instances in
-            # window.vueinfo[$id].instances and put some updating logic in a
-            # Vue({destroyed: }) callback, OR everyone watches and you do smart
-            # updating to avoid sending too much (prob harder)
-            watches[skey] = @js window.vueinfo[$id].vm["\$watch"]($skey, function (newval, oldval)
-                $v[] = newval
-            end)
-            init[skey] = v[]
-        else
-            init[skey] = v
-        end
+        vuedata[skey] = isa(v, Observable) ? v[] : v
     end
 
-    options = merge(Dict("el"=>"#$id", "data"=>(@js window.vueinfo[$id].data)), Dict(kwargs))
+    options = Dict{Any,Any}("data"=>vuedata)
+    merge!(options, Dict{Any,Any}(kwargs))
 
-    # Run callback before dependencies are loaded, e.g. to set up SystemJS config
-    onjs(wrapper, "preDependencies", run_predeps)
+    # This Node is just a placeholder, to enable the real node to be created with
+    # WebIO.showcbs[n], once the element id is known. This allows re-displaying
+    # a Component with a new element/widget id
+    id = WebIO.newid("vue-component")
+    n = dom"div"()
 
-    # initialise global Vue state before Vue gets loaded
-    onjs(wrapper, "preDependencies", @js function init_vueinfo()
-        if (typeof(window.vueinfo) === "undefined" ||
-                # julia restart (but js window remains, e.g. ijulia kernel restart)
-                ($id === "vue-component-1"))
-            console.log("clean Vue.jl slate")
-            window.vueinfo = d()
-        end
-        if (typeof(window.vueinfo[$id]) === "undefined")
-            # console.log("init everything")
-            window.vueinfo[$id] = d(:data => d())
-            window.vueinfo[$id].instance_count = 1
-            console.log("initialising data for "+$id)
-            window.vueinfo[$id].data = $init
-        else
-            window.vueinfo[$id].instance_count += 1
-        end
-        console.log("num instances of "+$id+" is "+window.vueinfo[$id].instance_count)
-    end)
-
-    # there will be one Widget instance on the julia side (`wrapper`), but
-    # potentially multiples on the js - one for each time the vue component is
-    # displayed
-    n = wrapper()
-
-    # the below `display_new_instance` will be run when the widget is to be
-    # displayed
+    # `display_new_instance` will be called when `show` is called on `n`
     WebIO.showcbs[n] = function display_new_instance(parent_id=WebIO.newid("node"))
         vueid = id*"-$parent_id"
-        nnew = append(n, [dom"div#$vueid"(template)])
+        wrapper = Widget(vueid; dependencies=dependencies)
+        nnew = wrapper(dom"div#$vueid"(template))
+
+        # Run callback before dependencies are loaded, e.g. to set up SystemJS config
+        onjs(wrapper, "preDependencies", run_predeps)
+
+        watches = Dict()
+        for (k, v) in data
+            skey = string(k)
+            if isa(v, Observable)
+                # associate the observable with the widget wrapper
+                setobservable!(wrapper, skey, v)
+
+                # forward updates from Julia to the Vue property, Vue watches the
+                # this.vue object's data properties, and updates its view when
+                # they change
+                onjs(v, @js (val) -> (this.vue[$skey] = val))
+
+                # Forward vue updates back to WebIO observable, which will send it
+                # to Julia iff the the observable's sync property is true
+                watches[skey] = @js this.vue["\$watch"]($skey, function (newval, oldval)
+                    $v[] = newval
+                end)
+            end
+        end
+
         options["el"] = "#$vueid"
 
         ondeps_fn = @js function (Vue)
@@ -125,20 +95,11 @@ function vue(template, data=Dict(); dependencies=vue_deps,
             ($run_ondeps).apply(this, arguments)
             console.log("initialising "+$vueid)
             this.vue = @new Vue($options)
-            if typeof(window.vueinfo[$id].vm) === "undefined"
-                window.vueinfo[$id].vm = this.vue
-                # console.log("setting watches")
-                $(values(watches)...)
-            end
+            $(values(watches)...)
             ($run_post).apply(this, arguments)
         end
 
-        # n.b. a new deps promise is created for each displayed instance,
-        # `ondependencies` only adds the `ondeps_fn` to the latest instance. In
-        # contrast, the `onjs` function stores the handlers in julia and thus
-        # when a new js instance is displayed, all handlers will be run when the
-        # dependenciesLoaded promise resolves, thus we use `ondependencies` here
-        # to just run the ondeps_fn for the instance we're about to display.
+        # run the `ondeps_fn` when dependencies are loaded
         ondependencies(wrapper, ondeps_fn)
         nnew
     end
