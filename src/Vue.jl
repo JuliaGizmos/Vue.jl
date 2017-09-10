@@ -77,13 +77,20 @@ function vue(template, data=Dict(); dependencies=vue_deps,
                 # forward updates from Julia to the Vue property, Vue watches the
                 # this.vue object's data properties, and updates its view when
                 # they change
-                onjs(v, @js (val) -> (this.vue[$skey] = val))
+                onjs(v, @js function (val)
+                    # This copy is needed to avoid the Vue.js reactivity system
+                    @var valcopy = JSON.parse(JSON.stringify(val))
+                    this.vue[$skey] = valcopy
+                end)
 
                 # Forward vue updates back to WebIO observable, which will send it
                 # to Julia iff the the observable's sync property is true
-                watches[skey] = @js this.vue["\$watch"]($skey, function (newval, oldval)
-                    $v[] = newval
-                end)
+                watches[skey] =
+                    @js this.vue["\$watch"]($skey, function (val, oldval)
+                        # This copy is needed to avoid Vue.js reactivity system
+                        @var valcopy = JSON.parse(JSON.stringify(val))
+                        $v[] = valcopy
+                    end)
             end
         end
 
