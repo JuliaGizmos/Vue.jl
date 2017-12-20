@@ -9,7 +9,7 @@ const noopjs = (@js function() end)
 const vue_deps = [Dict("url"=>"vue", "type"=>"js")]
 # Run before dependencies are loaded to set up js paths
 const systemjs_config_vue = Dict(
-    "paths"=>Dict("vue"=>"https://gitcdn.xyz/repo/vuejs/vue/v2.4.2/dist/vue.js")
+    "paths"=>Dict("vue"=>"https://gitcdn.xyz/cdn/vuejs/vue/v2.4.2/dist/vue.js")
 )
 const vue_predeps_fn = @js function ()
     SystemJS.config($systemjs_config_vue)
