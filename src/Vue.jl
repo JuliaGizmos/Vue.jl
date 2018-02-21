@@ -65,8 +65,12 @@ function vue(template, data=Dict(); kwargs...)
         @var options = $options
         options.el = this.dom
         console.log(options)
-        this.vue = @new Vue(options)
-        $(values(watches)...)
+        @var self = this
+        function init()
+            this.vue = @new Vue(options)
+            $(values(watches)...)
+        end
+        setTimeout(() -> init.call(self), 0)
     end
 
     # run the `ondeps_fn` when dependencies are loaded
