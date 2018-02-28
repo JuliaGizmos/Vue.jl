@@ -1,22 +1,26 @@
 module Vue
 
-using WebIO
+using WebIO, JSExpr
 
 export vue, Observable, on, @js, @js_str, @dom_str
 
 """
-```
-vue(template, data=Dict(); kwargs...)
-```
+`vue(template, data=Dict(); kwargs...)`
+
+Create a Vue instance of `template`, and fill it with `data`.
+
+# Arguments
+
+- `template` the `Node` that acts as the template for the vue instance. See [Vue syntax](https://vuejs.org/v2/guide/syntax.html)
+- `data` is either a dictionary or an array of `propertyName => value` pairs.
+  If a property's value is an observable, this function automatically sets up Julia -> JS communication.
+  To set up JS to Julia communication set up an event handler on `scope[propertyName]` (by calling `on(f, scope[propertyName])`)
+  _before_ rendering the scope.
 
 You can pass any other options for the [Vue constructor](https://vuejs.org/v2/guide/instance.html) as keyword arguments to
-vue E.g. `vue(...; methods=Dict(:sayhello=>@js function(){ alert("hello!") }))`
+`vue` E.g. `vue(...; methods=Dict(:sayhello=>@js function(){ alert("hello!") }))`
 """
 function vue(template, data=Dict(); kwargs...)
-    # note that all the code below, except that in `display_new_instance` only
-    # runs per component, so if the component is displayed twice it won't be run
-    # again.
-
     vuedata = Dict()
     for (k, v) in data
         skey = string(k)
