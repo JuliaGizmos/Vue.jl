@@ -34,7 +34,7 @@ function vue(template, data=Dict(); kwargs...)
     # WebIO.showcbs[n], once the element id is known. This allows re-displaying
     # a Component with a new element/widget id
     id = WebIO.newid("vue-component")
-    widget = Widget(id; imports=Any["vue" => "https://gitcdn.xyz/cdn/vuejs/vue/v2.4.2/dist/vue.js"])
+    widget = Scope(id; imports=Any["vue" => "https://cdn.jsdelivr.net/npm/vue@2.5.13/dist/vue.js"])
     widget.dom = template
 
     watches = Dict()
@@ -68,7 +68,6 @@ function vue(template, data=Dict(); kwargs...)
         console.log("initialising "+$id)
         @var options = $options
         options.el = this.dom
-        console.log(options)
         @var self = this
         function init()
             this.vue = @new Vue(options)
