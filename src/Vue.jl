@@ -69,12 +69,16 @@ function vue(template, data=Dict(); watch=Dict(), kwargs...)
     options["watch"] = watch
     ondeps_fn = @js function (Vue)
         @var options = $options
+        options.template = this.dom.innerHTML
         #options.el = this.dom
         @var self = this
         function init()
             @var Component = Vue.component($id, options)
+            @var ComponentClass = Vue.extend(Component)
+            @var instance = @new ComponentClass(Dict("propsData"=>$vuedata))
+            instance["\$mount"]()
+            this.dom.appendChild(instance["\$el"])
             #self.vue = @new Vue(options)
-            @new Component(Dict("el"=>this.dom, "data" => $vuedata))
             #this.dom.innerHTML = $snippet
         end
         setTimeout(() -> init.call(self), 0)
