@@ -20,14 +20,15 @@ Create a Vue instance of `template`, and fill it with `data`.
 You can pass any other options for the [Vue constructor](https://vuejs.org/v2/guide/instance.html) as keyword arguments to
 `vue` E.g. `vue(...; methods=Dict(:sayhello=>@js function(){ alert("hello!") }))`
 """
-function vue(template, data=Dict(); kwargs...)
+function vue(template, data=Dict(); watch=Dict(), kwargs...)
     vuedata = Dict()
     for (k, v) in data
         skey = string(k)
         vuedata[skey] = isa(v, Observable) ? v[] : v
     end
 
-    options = Dict{Any,Any}("data"=>vuedata)
+    #options = Dict{Any,Any}("data"=>vuedata)
+    options = Dict()
     merge!(options, Dict{Any,Any}(kwargs))
 
     # This Node is just a placeholder, to enable the real node to be created with
@@ -37,12 +38,11 @@ function vue(template, data=Dict(); kwargs...)
     widget = Scope(id; imports=Any["vue" => "/pkg/Vue/vue.js"])
     widget.dom = template
 
-    watches = Dict()
     for (k, v) in data
         skey = string(k)
         if isa(v, Observable)
             # associate the observable with the widget
-            setobservable!(widget, skey, v)
+            widget[skey] = v
 
             # forward updates from Julia to the Vue property, Vue watches the
             # this.vue object's data properties, and updates its view when
@@ -55,23 +55,27 @@ function vue(template, data=Dict(); kwargs...)
 
             # Forward vue updates back to WebIO observable, which will send it
             # to Julia iff the the observable's sync property is true
-            watches[skey] =
-                @js this.vue["\$watch"]($skey, function (val, oldval)
+            watch[skey] =
+                @js function (val, oldval)
                     # This copy is needed to avoid Vue.js reactivity system
                     @var valcopy = JSON.parse(JSON.stringify(val))
                     $v[] = valcopy
-                end)
+                end
         end
     end
 
+    id = WebIO.newid("webio-vue")
+    snippet = "<$id></$id>"
+    options["watch"] = watch
     ondeps_fn = @js function (Vue)
-        console.log("initialising "+$id)
         @var options = $options
-        options.el = this.dom
+        #options.el = this.dom
         @var self = this
         function init()
-            this.vue = @new Vue(options)
-            $(values(watches)...)
+            @var Component = Vue.component($id, options)
+            #self.vue = @new Vue(options)
+            @new Component(Dict("el"=>this.dom, "data" => $vuedata))
+            #this.dom.innerHTML = $snippet
         end
         setTimeout(() -> init.call(self), 0)
     end
