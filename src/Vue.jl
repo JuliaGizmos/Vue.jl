@@ -4,6 +4,8 @@ using WebIO, JSExpr
 
 export vue, Observable, on, @js, @js_str, @dom_str
 
+const vue_js = joinpath(Pkg.dir("Vue"), "assets", "vue.js")
+
 """
 `vue(template, data=Dict(); kwargs...)`
 
@@ -34,7 +36,7 @@ function vue(template, data=Dict(); kwargs...)
     # WebIO.showcbs[n], once the element id is known. This allows re-displaying
     # a Component with a new element/widget id
     id = WebIO.newid("vue-component")
-    widget = Scope(id; imports=Any["vue" => "/pkg/Vue/vue.js"])
+    widget = Scope(id; imports=Any["vue" => vue_js])
     widget.dom = template
 
     watches = Dict()
