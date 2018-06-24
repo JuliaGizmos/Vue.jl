@@ -50,7 +50,7 @@ function vue(template, data=Dict(); kwargs...)
             onjs(v, @js function (val)
                 # This copy is needed to avoid the Vue.js reactivity system
                 @var valcopy = JSON.parse(JSON.stringify(val))
-                if !(val === this.vue[$skey] || arrays_and_equal(val, this.vue[$skey]) ||
+                if !(val === this.vue[$skey] || this.arrays_and_equal(val, this.vue[$skey]) ||
                     (val !== val && this.vue[$skey] !== this.vue[$skey]))
 
                     this.vue[$skey] = valcopy
@@ -72,11 +72,25 @@ function vue(template, data=Dict(); kwargs...)
         end
     end
 
+    array_equality = js"""
+    this.arrays_and_equal = function (arr1, arr2) {
+        if (!(Array.isArray(arr1)) || !(Array.isArray(arr2)))
+            return false
+        var length = arr1.length
+        if (length !== arr2.length) return false
+        for (var i = 0; i < length; i++)
+            if (arr1[i] !== arr2[i])
+                return false
+        return true
+    }
+    """
+
     ondeps_fn = @js function (Vue)
         console.log("initialising "+$id)
         @var options = $options
         options.el = this.dom
         @var self = this
+        $array_equality
         function init()
             this.vue = @new Vue(options)
             this.valueFromJulia = Dict()
