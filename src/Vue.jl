@@ -50,7 +50,9 @@ function vue(template, data=Dict(); kwargs...)
             onjs(v, @js function (val)
                 # This copy is needed to avoid the Vue.js reactivity system
                 @var valcopy = JSON.parse(JSON.stringify(val))
-                if val != this.vue[$skey]
+                if !(val === this.vue[$skey] || arrays_and_equal(val, this.vue[$skey]) ||
+                    (val !== val && this.vue[$skey] !== this.vue[$skey]))
+
                     this.vue[$skey] = valcopy
                     this.valueFromJulia[$skey] = true
                 end
