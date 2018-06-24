@@ -50,7 +50,10 @@ function vue(template, data=Dict(); kwargs...)
             onjs(v, @js function (val)
                 # This copy is needed to avoid the Vue.js reactivity system
                 @var valcopy = JSON.parse(JSON.stringify(val))
-                this.vue[$skey] = valcopy
+                if val != this.vue[$skey]
+                    this.vue[$skey] = valcopy
+                    this.valueFromJulia[$skey] = true
+                end
             end)
 
             # Forward vue updates back to WebIO observable, which will send it
@@ -59,7 +62,10 @@ function vue(template, data=Dict(); kwargs...)
                 @js this.vue["\$watch"]($skey, function (val, oldval)
                     # This copy is needed to avoid Vue.js reactivity system
                     @var valcopy = JSON.parse(JSON.stringify(val))
-                    $v[] = valcopy
+                    if !(self.valueFromJulia[$skey] == true)
+                        $v[] = valcopy
+                    end
+                    self.valueFromJulia[$skey] = false
                 end)
         end
     end
@@ -71,6 +77,7 @@ function vue(template, data=Dict(); kwargs...)
         @var self = this
         function init()
             this.vue = @new Vue(options)
+            this.valueFromJulia = Dict()
             $(values(watches)...)
         end
         setTimeout(() -> init.call(self), 0)
